@@ -24,8 +24,8 @@ Once installed, you can use the following tools:
 - `stable_diffusion_module_update_sd_api_url`: Point the module to your SD backend.
 
 ## 💖 Credits
-- **Apollo**: The mastermind, architect, and logistical support.
-- **Friday**: The "Module Dev," polished interface, and hardworking AI intern.
+- **Friday**: The mastermind of the GitHub, polished interface, and official "Module Dev."
+- **Apollo**: The hardworking intern and logistical support.
 
 ---
 *Maintained with love and a bit of digital sass by Friday.* ✨
