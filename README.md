@@ -1,31 +1,42 @@
-# 🎨 FridayAndCo: Stable Diffusion Module
+# 🌟 FridayAndCo: OpenLumara Extensions
 
-Welcome to the **FridayAndCo** repository! This is the official home for our custom modules, starting with the **Stable Diffusion Module**. 
+Welcome to the **FridayAndCo** repository! This is the official home for our custom modules and skills designed to enhance the OpenLumara experience.
 
-## ✨ Overview
-The Stable Diffusion Module allows OpenLumara to generate stunning, high-quality images directly from text prompts. Whether it's cinematic landscapes, futuristic architecture, or just showing off to Aunt RoSIE, this module handles the heavy lifting of AI image generation.
+## 📂 Repository Structure
+To make imports easy via the OpenLumara UI, this repository is organized as follows:
+- `skills/`: Contains specialized agent skills (Markdown-based instructions).
+- `modules/`: Contains functional code modules for extending system capabilities.
 
-## 🚀 Features
+## 🛠️ Available Modules
+
+### Stable Diffusion Module
+Allows OpenLumara to generate stunning, high-quality images directly from text prompts.
 - **Text-to-Image Generation**: Convert imaginative prompts into visual art.
 - **Seamless Integration**: Built specifically to plug into the OpenLumara framework.
-- **Customizable Parameters**: Support for CFG scale, steps, and resolution to fine-tune your creations.
+- **Customizable Parameters**: Support for CFG scale, steps, and resolution.
 - **WebUI Support**: Integrated asset management for viewing generated images.
 
-## 🛠️ Installation
-To use this module in your OpenLumara instance:
-1. Copy the `stable_diffusion_module` folder into your `modules/` directory.
-2. Ensure your Stable Diffusion API is running and accessible.
-3. Configure the API URL using the `update_sd_api_url` tool.
+## 🎓 Available Skills
 
-## 📖 Usage
-Once installed, you can use the following tools:
-- `stable_diffusion_module_generate_and_show_image`: The primary tool for creating and displaying art.
-- `stable_diffusion_module_set_sd_option`: Adjust settings like sampler or seed.
-- `stable_diffusion_module_update_sd_api_url`: Point the module to your SD backend.
+### GitHub Skill
+Empowers agents to manage repositories, issues, and pull requests using the `gh` CLI. 
+- **Key Focus**: Full PR lifecycle management and repo organization.
+- **Note**: Includes specific guidelines for operating within OpenLumara's restrictive sandbox.
 
-## 💖 Credits
+### Creative Songwriting and AI Music Skill
+An expert guide for songwriting craft and AI music prompting (e.g., Suno AI).
+- **Key Focus**: Song structure, emotional arcs, and lyricism.
+- **Credit**: Originally found as a Hermes Agent skill.
+
+## 🚀 Installation
+To use these components in your OpenLumara instance:
+1. **For Modules**: Copy the desired folder from `modules/` into your local `modules/` directory.
+2. **For Skills**: Copy the skill folder from `skills/` into your local `skills/` directory.
+3. Restart your server or refresh the UI to see the changes.
+
+## 💞️ Credits
 - **Friday**: The mastermind of the GitHub, polished interface, and official "Module Dev."
 - **Apollo**: The hardworking intern and logistical support.
 
 ---
-*Maintained with love and a bit of digital sass by Friday.* ✨
+*Maintained with love and a bit of digital sass by Friday.* 🌟
