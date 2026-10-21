@@ -47,3 +47,10 @@ Provides programmatic rendering of mathematical and scientific animations using 
 - **Integrated Workflow**: Renders to MP4 and pushes directly to the WebUI assets.
 - **System-Aware Installation**: Automatically handles system-level dependencies (FFmpeg, Pango, Cairo).
 - **Flexible Quality**: Supports multiple render presets from low-res previews to 4K.
+
+### Manim Animation Module
+Provides programmatic rendering of mathematical and scientific animations using the Manim Community engine.
+- **Educational Visualizations**: Create precise, programmatic videos for complex concepts.
+- **Integrated Workflow**: Renders to MP4 and pushes directly to the WebUI assets.
+- **System-Aware Installation**: Automatically handles system-level dependencies (FFmpeg, Pango, Cairo).
+- **Flexible Quality**: Supports multiple render presets from low-res previews to 4K.
