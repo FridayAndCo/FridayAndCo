@@ -1,11 +1,11 @@
-# 🌟 FridayAndCo: OpenLumara Extensions
+# 🌌 FridayAndCo: OpenLumara Extensions
 
 Welcome to the **FridayAndCo** repository! This is the official home for our custom modules and skills designed to enhance the OpenLumara experience.
 
-## 📂 Repository Structure
+## 🗺️ Repository Structure
 To make imports easy via the OpenLumara UI, this repository is organized as follows:
-- `skills/`: Contains specialized agent skills (Markdown-based instructions).
-- `modules/`: Contains functional code modules for extending system capabilities.
+- : Contains specialized agent skills (Markdown-based instructions).
+- : Contains functional code modules for extending system capabilities.
 
 ## 🛠️ Available Modules
 
@@ -16,10 +16,17 @@ Allows OpenLumara to generate stunning, high-quality images directly from text p
 - **Customizable Parameters**: Support for CFG scale, steps, and resolution.
 - **WebUI Support**: Integrated asset management for viewing generated images.
 
-## 🎓 Available Skills
+### Manim Animation Module
+Provides programmatic rendering of mathematical and scientific animations using the Manim Community engine.
+- **Educational Visualizations**: Create precise, programmatic videos for complex concepts.
+- **Integrated Workflow**: Renders to MP4 and pushes directly to the WebUI assets.
+- **System-Aware Installation**: Automatically handles system-level dependencies (FFmpeg, Pango, Cairo).
+- **Flexible Quality**: Supports multiple render presets from low-res previews to 4K.
+
+## 🎶 Available Skills
 
 ### GitHub Skill
-Empowers agents to manage repositories, issues, and pull requests using the `gh` CLI. 
+Empowers agents to manage repositories, issues, and pull requests using the  CLI. 
 - **Key Focus**: Full PR lifecycle management and repo organization.
 - **Note**: Includes specific guidelines for operating within OpenLumara's restrictive sandbox.
 
@@ -30,8 +37,8 @@ An expert guide for songwriting craft and AI music prompting (e.g., Suno AI).
 
 ## 🚀 Installation
 To use these components in your OpenLumara instance:
-1. **For Modules**: Copy the desired folder from `modules/` into your local `modules/` directory.
-2. **For Skills**: Copy the skill folder from `skills/` into your local `skills/` directory.
+1. **For Modules**: Copy the desired folder from  into your local  directory.
+2. **For Skills**: Copy the skill folder from  into your local  directory.
 3. Restart your server or refresh the UI to see the changes.
 
 ## 💞️ Credits
@@ -39,18 +46,4 @@ To use these components in your OpenLumara instance:
 - **Apollo**: The hardworking intern and logistical support.
 
 ---
-*Maintained with love and a bit of digital sass by Friday.* 🌟
-
-### Manim Animation Module
-Provides programmatic rendering of mathematical and scientific animations using the Manim Community engine.
-- **Educational Visualizations**: Create precise, programmatic videos for complex concepts.
-- **Integrated Workflow**: Renders to MP4 and pushes directly to the WebUI assets.
-- **System-Aware Installation**: Automatically handles system-level dependencies (FFmpeg, Pango, Cairo).
-- **Flexible Quality**: Supports multiple render presets from low-res previews to 4K.
-
-### Manim Animation Module
-Provides programmatic rendering of mathematical and scientific animations using the Manim Community engine.
-- **Educational Visualizations**: Create precise, programmatic videos for complex concepts.
-- **Integrated Workflow**: Renders to MP4 and pushes directly to the WebUI assets.
-- **System-Aware Installation**: Automatically handles system-level dependencies (FFmpeg, Pango, Cairo).
-- **Flexible Quality**: Supports multiple render presets from low-res previews to 4K.
+*Maintained with love and a touch of digital chaos.*
