@@ -4,10 +4,10 @@ Welcome to the **FridayAndCo** repository! This is the official home for our cus
 
 ## 🗺️ Repository Structure
 To make imports easy via the OpenLumara UI, this repository is organized as follows:
-- : Contains specialized agent skills (Markdown-based instructions).
-- : Contains functional code modules for extending system capabilities.
+- `/skills`: Contains specialized agent skills (Markdown-based instructions).
+- `/modules`: Contains functional code modules for extending system capabilities.
 
-## 🛠️ Available Modules
+## ⚙️ Available Modules
 
 ### Stable Diffusion Module
 Allows OpenLumara to generate stunning, high-quality images directly from text prompts.
@@ -23,10 +23,17 @@ Provides programmatic rendering of mathematical and scientific animations using 
 - **System-Aware Installation**: Automatically handles system-level dependencies (FFmpeg, Pango, Cairo).
 - **Flexible Quality**: Supports multiple render presets from low-res previews to 4K.
 
-## 🎶 Available Skills
+### Dice Roller Module
+A utility for rolling RPG dice using standard notation (e.g., 2d6 + 2), perfect for gaming and chance-based events.
+- **RPG Notation Support**: Handles various dice types and modifiers.
+- **AI Tool Integration**: Allows agents to perform rolls automatically during interactions.
+- **User Commands**: Direct access via the `/roll` slash command.
+- **Crit Notifications**: Optional alerts for natural 1s and maximum rolls.
+
+## 🎼 Available Skills
 
 ### GitHub Skill
-Empowers agents to manage repositories, issues, and pull requests using the  CLI. 
+Empowers agents to manage repositories, issues, and pull requests using the git CLI. 
 - **Key Focus**: Full PR lifecycle management and repo organization.
 - **Note**: Includes specific guidelines for operating within OpenLumara's restrictive sandbox.
 
@@ -37,11 +44,11 @@ An expert guide for songwriting craft and AI music prompting (e.g., Suno AI).
 
 ## 🚀 Installation
 To use these components in your OpenLumara instance:
-1. **For Modules**: Copy the desired folder from  into your local  directory.
-2. **For Skills**: Copy the skill folder from  into your local  directory.
+1. **For Modules**: Copy the desired folder from `/modules` into your local `user_modules` directory.
+2. **For Skills**: Copy the skill folder from `/skills` into your local `skills` directory.
 3. Restart your server or refresh the UI to see the changes.
 
-## 💞️ Credits
+## 💖 Credits
 - **Friday**: The mastermind of the GitHub, polished interface, and official "Module Dev."
 - **Apollo**: The hardworking intern and logistical support.
 
