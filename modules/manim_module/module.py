@@ -98,7 +98,8 @@ class ManimModule(core.module.Module):
             'fourk': ['-qk']
         }
         quality = self.config.get('quality', 'high')
-        return quality_map.get(quality, ['-qh'])
+        fps = int(self.config.get('fps', 30))
+        return quality_map.get(quality, ['-qh']) + [f'--fps', str(fps)]
 
     async def _render_scene_internal(
         self,
@@ -173,6 +174,7 @@ class ManimModule(core.module.Module):
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
+    @core.module.tool
     async def render_and_show_video(
         self,
         scene_code: str,
@@ -197,6 +199,7 @@ class ManimModule(core.module.Module):
 
         return f"Manim scene '{scene_name}' rendered and displayed! Video saved as: {filename}"
 
+    @core.module.tool
     async def render_scene_to_file(
         self,
         scene_code: str,

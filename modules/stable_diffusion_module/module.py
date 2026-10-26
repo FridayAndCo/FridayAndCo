@@ -82,6 +82,7 @@ class StableDiffusionModule(core.module.Module):
         except Exception as e:
             return None, str(e)
 
+    @core.module.tool
     async def generate_and_show_image(
         self,
         prompt: str,
@@ -109,6 +110,7 @@ class StableDiffusionModule(core.module.Module):
         
         return "Image generated and pushed directly to the chat!"
 
+    @core.module.tool
     async def update_sd_api_url(self, new_url: str):
         """Updates the Stable Diffusion API URL in the configuration."""
         # Remove trailing slash for consistency
@@ -136,6 +138,7 @@ class StableDiffusionModule(core.module.Module):
         except Exception as e:
             return self.result(f"Failed to update API URL: {str(e)}", success=False)
 
+    @core.module.tool
     async def get_sd_options(self):
         api_url = self.config.get('URL')
         if not api_url.startswith('http'):
@@ -150,6 +153,7 @@ class StableDiffusionModule(core.module.Module):
         except Exception as e:
             return self.result(f'Failed to retrieve options: {str(e)}', success=False)
 
+    @core.module.tool
     async def set_sd_option(self, option: str, value: Any):
         api_url = self.config.get('URL')
         if not api_url.startswith('http'):
