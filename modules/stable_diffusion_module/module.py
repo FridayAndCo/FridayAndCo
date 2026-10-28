@@ -1,185 +1,279 @@
+# -- AI GENERATED CODE (Qwen3.8 Flash Next) :: 2026-10-28 harness:openlumara
+# Stable diffusion module: sdcpp, a1111, openai, thenoise.
+
 import core
-import httpx
+import aiohttp
 import base64
 import os
 import time
-from typing import Optional, Any
+import random
+import asyncio
 
 class StableDiffusionModule(core.module.Module):
     category = 'Media'
 
     settings = {
+        'backend': {
+            'description': "Engine: 'sdcpp', 'a1111', 'openai', or 'thenoise'",
+            'default': 'sdcpp',
+            "type": "select",
+            "options": {
+                "sdcpp": "stable-diffusion.cpp server or a compatible server such as koboldcpp's image server",
+                "openai": "OpenAI API-compatible endpoint, such as lemonade",
+                "a1111": "Automatic1111",
+                "thenoise": "TheNoise - an image generation server specifically for AMD hardware"
+            }
+        },
         'URL': {
-            'type': 'string',
-            'description': 'The address to connect to',
-            'default': '127.0.0.1:7860'
+            'description': 'The address of the engine server',
+            'default': '127.0.0.1:8080'
+        },
+        'model': {
+            'description': "Model name (only used by the 'openai' backend; empty = server default)",
+            'default': ''
+        },
+        'resolution': {
+            'description': 'Default output resolution',
+            'default': '1024x1024',
+            'type': 'select',
+            'options': {
+                '512x512': '512×512 - SD1.5 native square',
+                '512x768': '512×768 - SD1.5 portrait',
+                '768x512': '768×512 - SD1.5 landscape',
+                '768x768': '768×768 - SD2 native',
+                '1024x1024': '1024×1024 - SDXL-class square',
+                '832x1216': '832×1216 - SDXL-class portrait',
+                '1216x832': '1216×832 - SDXL-class landscape',
+            }
+        },
+        "cfg_scale": {
+            "description": "CFG scale to use for the image generation model. This determines how closely the model should follow the prompt - the lower the cfg, the more creative it will be. Some models (such as z-image turbo) need a very low cfg (like below 1) for them to work properly.",
+            "default": 6
+        },
+        "steps": {
+            "description": "Amount of generation steps that should be used",
+            "default": 20
+        },
+        "sampler": {
+            "description": "Name of the sampler to use. Leave blank to default to the server's setting",
+            "default": ""
         },
         'output_folder': {
-            'type': 'string',
-            'description': 'Folder where generated images will be saved',
-            'default': 'webui/assets'
-        }
+            'description': 'Folder where generated images are saved and served from',
+            'default': '~/gen_images'
+        },
     }
 
-    dependencies = ['httpx']
+    @property
+    def asset_mounts(self):
+        # expose the image folder to the webui under /ext-assets/stable_diffusion_module/gen/
+        folder = self.config.get('output_folder')
+        if folder:
+            folder = os.path.expanduser(folder)
+        return {'gen': folder} if folder else {}
 
     async def on_ready(self):
-        # Force output directory to webui/assets regardless of config
-        # to ensure WebUI assets routing works.
-        module_path = os.path.dirname(os.path.abspath(__file__))
-        self.output_dir = os.path.join(module_path, 'webui', 'assets')
-        
+        self.output_dir = self.asset_mounts.get('gen') or os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'webui', 'assets')
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir, exist_ok=True)
-        
-        url = self.config.get("URL")
-        if url == '127.0.0.1:7860':
-            self.channel.log(self.name, "WARNING: Using default API URL (127.0.0.1). Please use 'update_sd_api_url' to set your actual server IP!")
-        else:
-            self.channel.log(self.name, f'Stable Diffusion Module ready. API: {url}')
+        self.channel.log(self.name, 'Stable Diffusion Module ready. Backend: {} @ {} | images: {}'.format(
+            self.config.get('backend'), self.config.get('URL'), self.output_dir))
 
-    async def _generate_image_internal(
-        self,
-        prompt: str,
-        negative_prompt: str = '',
-        steps: int = 8,
-        width: int = 1024,
-        height: int = 1024,
-        cfg_scale: float = 1.0,
-        sampler_name: str = 'Euler a',
-        seed: int = -1
-    ):
-        # Ensure the URL has the http protocol
+    def _base_url(self):
         api_url = self.config.get('URL')
         if not api_url.startswith('http'):
             api_url = 'http://' + api_url
-        
-        url = f"{api_url.rstrip('/')}/sdapi/v1/txt2img"
+        return api_url.rstrip('/')
+
+    def _parse_resolution(self, resolution):
+        # 'WxH' from arg, else the configured default. Returns (w, h) or None.
+        res = self.config.get('resolution') or '512x512'
+        res = res.lower().replace('×', 'x').strip()
+        parts = res.split('x')
+        if len(parts) != 2:
+            return None
+        try:
+            return int(parts[0]), int(parts[1])
+        except ValueError:
+            return None
+
+    # ---- per-backend generators: each returns raw image bytes ----
+
+    async def _gen_sdcpp(self, session, base, prompt, negative, steps, width, height, cfg, sampler, seed):
         payload = {
             'prompt': prompt,
-            'negative_prompt': negative_prompt,
+            'negative_prompt': negative,
+            'width': width,
+            'height': height,
+            'steps': steps,
+            'cfg_scale': cfg,
+            'seed': seed,
+        }
+        if sampler:
+            payload['sampling_method'] = sampler
+        async with session.post(base + '/sdcpp/v1/img_gen', json=payload) as resp:
+            resp.raise_for_status()
+            job = await resp.json()
+        job_id = job.get('id')
+        if not job_id:
+            raise RuntimeError('sdcpp did not return a job id')
+        deadline = time.time() + 300
+        while time.time() < deadline:
+            await asyncio.sleep(1)
+            async with session.get('{}/sdcpp/v1/jobs/{}'.format(base, job_id),
+                                   headers={'Cache-Control': 'no-store'}) as resp:
+                resp.raise_for_status()
+                job = await resp.json()
+            status = job.get('status')
+            if status in ('completed', 'succeeded'):
+                images = (job.get('result') or {}).get('images') or []
+                if not images:
+                    raise RuntimeError('sdcpp job finished with no images')
+                return base64.b64decode(images[0].get('b64_json', ''))
+            if status in ('failed', 'cancelled', 'error'):
+                raise RuntimeError('sdcpp job failed: {}'.format(
+                    (job.get('error') or {}).get('message', status)))
+        raise RuntimeError('sdcpp job timed out')
+
+    async def _gen_a1111(self, session, base, prompt, negative, steps, width, height, cfg, sampler, seed):
+        payload = {
+            'prompt': prompt,
+            'negative_prompt': negative,
             'steps': steps,
             'width': width,
             'height': height,
-            'cfg_scale': cfg_scale,
-            'sampler_name': sampler_name,
-            'seed': seed
+            'cfg_scale': cfg,
+            'seed': seed,
         }
+        if sampler:
+            payload['sampler_name'] = sampler
+        async with session.post(base + '/sdapi/v1/txt2img', json=payload) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+        images = data.get('images', [])
+        if not images:
+            raise RuntimeError('No images returned by the A1111 API.')
+        return base64.b64decode(images[0])
+
+    async def _gen_openai(self, session, base, prompt, negative, steps, width, height, cfg, sampler, seed):
+        payload = {
+            'prompt': prompt,
+            'n': 1,
+            'size': '{}x{}'.format(width, height),
+            'response_format': 'b64_json',
+        }
+        model = self.config.get('model')
+        if model:
+            payload['model'] = model
+        # non-standard extras; servers that know them use them, others ignore
+        for key, val in (('negative_prompt', negative), ('steps', steps),
+                         ('cfg_scale', cfg), ('seed', seed)):
+            if val not in ('', -1, None):
+                payload[key] = val
+        async with session.post(base + '/v1/images/generations', json=payload) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+        items = data.get('data', [])
+        if not items or not items[0].get('b64_json'):
+            raise RuntimeError('OpenAI image API returned no image data.')
+        return base64.b64decode(items[0]['b64_json'])
+
+    async def _gen_thenoise(self, session, base, prompt, negative, steps, width, height, cfg, sampler, seed):
+        payload = {
+            'prompt': prompt,
+            'negative_prompt': negative,
+            'steps': steps,
+            'width': width,
+            'height': height,
+            'guidance_scale': cfg,
+            'seed': seed,
+        }
+        s = (sampler or '').lower().replace(' ', '_')
+        if s in ('euler', 'er_sde'):
+            payload['sampler'] = s
+        async with session.post(base + '/text2image', json=payload) as resp:
+            resp.raise_for_status()
+            return await resp.read()  # raw PNG
+
+    async def _generate_image_internal(self, prompt, negative_prompt='', steps=8, width=1024,
+                                       height=1024, cfg_scale=1.0, sampler_name='', seed=-1):
+        backend = (self.config.get('backend') or 'sdcpp').lower()
+        base = self._base_url()
+        gen = {
+            'sdcpp': self._gen_sdcpp,
+            'a1111': self._gen_a1111,
+            'sdnext': self._gen_a1111,   # SD.Next speaks A1111
+            'openai': self._gen_openai,
+            'thenoise': self._gen_thenoise,
+        }.get(backend)
+        if gen is None:
+            return None, "Unknown backend '{}'. Use sdcpp, a1111, openai, or thenoise.".format(backend)
+        timeout = aiohttp.ClientTimeout(total=300)
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-                data = response.json()
-            images = data.get('images', [])
-            if not images:
-                return None, "No images were generated by the API."
-            
-            image_data = base64.b64decode(images[0])
-            filename = f"sd_{int(time.time())}.png"
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                image_bytes = await gen(session, base, prompt, negative_prompt, steps,
+                                        width, height, cfg_scale, sampler_name, seed)
+            filename = 'sd_{}.png'.format(int(time.time()))
             with open(os.path.join(self.output_dir, filename), 'wb') as f:
-                f.write(image_data)
+                f.write(image_bytes)
             return filename, None
         except Exception as e:
             return None, str(e)
 
     @core.module.tool
-    async def generate_and_show_image(
-        self,
-        prompt: str,
-        negative_prompt: str = '',
-        steps: int = 8,
-        width: int = 1024,
-        height: int = 1024,
-        cfg_scale: float = 1.0,
-        sampler_name: str = 'Euler a',
-        seed: int = -1
-    ):
-        filename, err = await self._generate_image_internal(prompt, negative_prompt, steps, width, height, cfg_scale, sampler_name, seed)
+    async def generate_image(self, prompt, negative_prompt='', seed=-1):
+        """Generate an image and show it in the chat.
+
+        Returns the seed that was used. Seed can be used to further refine previous image if desired. Omit seed (or pass -1) for random seed."""
+        seed = int(seed)
+        if seed < 0:
+            seed = random.randint(0, 2**32 - 1)
+        parsed = self._parse_resolution(self.config.get("resolution"))
+
+        if parsed is None:
+            return self.result("Invalid resolution '{}'. Use the format '1024x1024'.".format(resolution), success=False)
+
+        width, height = parsed
+        filename, err = await self._generate_image_internal(
+            prompt, negative_prompt,
+            steps=self.config.get("steps"),
+            width=width, height=height,
+            cfg_scale=self.config.get("cfg_scale"),
+            sampler_name=self.config.get("sampler"),
+            seed=seed
+        )
+
         if err:
             return self.result(err, success=False)
-        
-        # The WebUI serves module assets at /ext-assets/<module_name>/<filename>
-        url = f"/ext-assets/stable_diffusion_module/{filename}"
-        img_tag = f'<img src="{url}" alt="{filename}" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;">'
-        
-        # Direct push to channel as suggested by RoSIE
-        await self.channel.push({
-            "role": "assistant",
-            "content": img_tag
-        })
-        
-        return "Image generated and pushed directly to the chat!"
 
-    @core.module.tool
-    async def update_sd_api_url(self, new_url: str):
-        """Updates the Stable Diffusion API URL in the configuration."""
-        # Remove trailing slash for consistency
-        new_url = new_url.rstrip('/')
+        url = '/ext-assets/stable_diffusion_module/gen/{}'.format(filename)
+        img_tag = '<img src="{}" alt="{}" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;">'.format(url, filename)
+        await self.channel.push({'role': 'assistant', 'content': img_tag})
+        return 'Image generated and pushed to chat. Seed used: {}. To refine this image, pass seed={} with an adjusted prompt or parameters. For a brand new image, omit seed for a random seed.'.format(seed, seed)
 
-        # Check if the setting is defined in the module's settings structure
-        if 'URL' not in self.config.structure:
-            return self.result("Setting 'URL' is not defined for this module.", success=False)
-
+    @core.module.command('sd_status', help='Checks if the SD backend is reachable')
+    async def sd_status_command(self, args):
+        base = self._base_url()
+        backend = (self.config.get('backend') or 'sdcpp').lower()
+        probes = {
+            'sdcpp': base + '/sdcpp/v1/capabilities',
+            'a1111': base + '/sdapi/v1/options',
+            'sdnext': base + '/sdapi/v1/options',
+            'openai': base + '/v1/models',
+            'thenoise': base + '/health',
+        }
+        probe = probes.get(backend)
+        if probe is None:
+            return "Unknown backend '{}'.".format(backend)
         try:
-            # Traverse to the nested dict in the root StorageDict
-            storage = self.config.config.root_config
-            path = self.config.config.base_path
-            
-            current = storage
-            for part in path:
-                if part not in current:
-                    current[part] = {}
-                current = current[part]
-            
-            current['URL'] = new_url
-            storage.save()
-            
-            return f"Successfully updated API URL to: {new_url}. Please restart the module or harness for changes to fully take effect."
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                async with session.get(probe) as resp:
+                    resp.raise_for_status()
+                    try:
+                        info = await resp.json()
+                    except Exception:
+                        info = '(no json)'
+            return 'SD backend ({}) is online: {}'.format(backend, info)
         except Exception as e:
-            return self.result(f"Failed to update API URL: {str(e)}", success=False)
-
-    @core.module.tool
-    async def get_sd_options(self):
-        api_url = self.config.get('URL')
-        if not api_url.startswith('http'):
-            api_url = 'http://' + api_url
-        
-        url = f"{api_url.rstrip('/')}/sdapi/v1/options"
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                return self.result(response.json(), success=True)
-        except Exception as e:
-            return self.result(f'Failed to retrieve options: {str(e)}', success=False)
-
-    @core.module.tool
-    async def set_sd_option(self, option: str, value: Any):
-        api_url = self.config.get('URL')
-        if not api_url.startswith('http'):
-            api_url = 'http://' + api_url
-            
-        url = f"{api_url.rstrip('/')}/sdapi/v1/options"
-        payload = {option: value}
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-                return self.result(f'Option {option} updated to {value}', success=True)
-        except Exception as e:
-            return self.result(f'Failed to set option: {str(e)}', success=False)
-
-    @core.module.command('sd_status', help='Checks if the SD API is reachable')
-    async def sd_status_command(self, args: list):
-        api_url = self.config.get('URL')
-        if not api_url.startswith('http'):
-            api_url = 'http://' + api_url
-            
-        url = f"{api_url.rstrip('/')}/sdapi/v1/options"
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                return "Stable Diffusion API is online and reachable!"
-        except Exception as e:
-            return f"Stable Diffusion API is offline or unreachable: {str(e)}"
+            return 'SD backend is offline or unreachable: {}'.format(str(e))
