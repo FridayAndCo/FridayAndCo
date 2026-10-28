@@ -3,3 +3,4 @@ sd_outputs/
 stable_diffusion_module/webui/assets/
 *.mp4
 **/assets/*.mp4
+modules/stable_diffusion_module/webui/assets/
