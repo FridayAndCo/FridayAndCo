@@ -37,13 +37,15 @@ class StableDiffusionModule(core.module.Module):
             'default': '1024x1024',
             'type': 'select',
             'options': {
-                '512x512': '512×512 - SD1.5 native square',
-                '512x768': '512×768 - SD1.5 portrait',
-                '768x512': '768×512 - SD1.5 landscape',
-                '768x768': '768×768 - SD2 native',
-                '1024x1024': '1024×1024 - SDXL-class square',
-                '832x1216': '832×1216 - SDXL-class portrait',
-                '1216x832': '1216×832 - SDXL-class landscape',
+                '512x512': '512\u00d7512 - SD1.5 native square',
+                '512x768': '512\u00d7768 - SD1.5 portrait',
+                '768x512': '768\u00d7512 - SD1.5 landscape',
+                '768x768': '768\u00d7768 - SD2 native',
+                '1024x1024': '1024\u00d71024 - SDXL-class square',
+                '832x1216': '832\u00d71216 - SDXL-class portrait',
+                '1216x832': '1216\u00d7832 - SDXL-class landscape',
+                '1280x720': '1280\u00d7720 - 720p HD landscape',
+                '1920x1080': '1920\u00d71080 - 1080p Full HD landscape',
             }
         },
         "cfg_scale": {
@@ -86,10 +88,11 @@ class StableDiffusionModule(core.module.Module):
             api_url = 'http://' + api_url
         return api_url.rstrip('/')
 
-    def _parse_resolution(self, resolution):
-        # 'WxH' from arg, else the configured default. Returns (w, h) or None.
-        res = self.config.get('resolution') or '512x512'
-        res = res.lower().replace('×', 'x').strip()
+    def _parse_resolution(self, resolution_str):
+        # Parse 'WxH' string. Returns (w, h) or None.
+        if not resolution_str:
+            return None
+        res = resolution_str.lower().replace('\u00d7', 'x').strip()
         parts = res.split('x')
         if len(parts) != 2:
             return None
@@ -222,25 +225,43 @@ class StableDiffusionModule(core.module.Module):
             return None, str(e)
 
     @core.module.tool
-    async def generate_image(self, prompt, negative_prompt='', seed=-1):
+    async def generate_image(self, prompt, negative_prompt='', seed=-1, steps=None, cfg_scale=None, sampler=None, resolution=None):
         """Generate an image and show it in the chat.
 
-        Returns the seed that was used. Seed can be used to further refine previous image if desired. Omit seed (or pass -1) for random seed."""
+        Args:
+            prompt: The image prompt.
+            negative_prompt: What to exclude from the image.
+            seed: Seed for generation. Pass -1 for random.
+            steps: (Optional) Override default generation steps.
+            cfg_scale: (Optional) Override default CFG scale.
+            sampler: (Optional) Override default sampler name.
+            resolution: (Optional) Override default resolution (e.g., '1280x720').
+
+        Returns the seed that was used. Seed can be used to further refine previous image if desired.
+        """
         seed = int(seed)
         if seed < 0:
             seed = random.randint(0, 2**32 - 1)
-        parsed = self._parse_resolution(self.config.get("resolution"))
+        
+        # Resolve parameters: Tool arg > Config > Default
+        res_str = resolution if resolution is not None else self.config.get("resolution")
+        parsed = self._parse_resolution(res_str)
 
         if parsed is None:
-            return self.result("Invalid resolution '{}'. Use the format '1024x1024'.".format(resolution), success=False)
+            return self.result("Invalid resolution '{}'. Use the format '1024x1024'.".format(res_str), success=False)
 
         width, height = parsed
+        
+        final_steps = steps if steps is not None else self.config.get("steps")
+        final_cfg = cfg_scale if cfg_scale is not None else self.config.get("cfg_scale")
+        final_sampler = sampler if sampler is not None else self.config.get("sampler")
+
         filename, err = await self._generate_image_internal(
             prompt, negative_prompt,
-            steps=self.config.get("steps"),
+            steps=final_steps,
             width=width, height=height,
-            cfg_scale=self.config.get("cfg_scale"),
-            sampler_name=self.config.get("sampler"),
+            cfg_scale=final_cfg,
+            sampler_name=final_sampler,
             seed=seed
         )
 
@@ -248,7 +269,7 @@ class StableDiffusionModule(core.module.Module):
             return self.result(err, success=False)
 
         url = '/ext-assets/stable_diffusion_module/gen/{}'.format(filename)
-        img_tag = '<img src="{}" alt="{}" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;">'.format(url, filename)
+        img_tag = '<img src=\"{}\" alt=\"{}\" style=\"max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;\">'.format(url, filename)
         await self.channel.push({'role': 'assistant', 'content': img_tag})
         return 'Image generated and pushed to chat. Seed used: {}. To refine this image, pass seed={} with an adjusted prompt or parameters. For a brand new image, omit seed for a random seed.'.format(seed, seed)
 
